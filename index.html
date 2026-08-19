@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NERV // PROJETO E — UNIDADE 01</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#08080a;
+    --bg-alt:#101013;
+    --panel:#0e0e11;
+    --orange:#ff5a1f;
+    --red:#d21f2f;
+    --purple:#7a2f8a;
+    --green:#8fd400;
+    --text:#e9e6df;
+    --text-dim:#8a8a90;
+    --line:rgba(233,230,223,0.09);
+    --line-strong:rgba(233,230,223,0.18);
+    --mono: 'JetBrains Mono', monospace;
+    --disp: 'Rajdhani', sans-serif;
+    --body: 'Inter', sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--body);
+    overflow-x:hidden;
+    position:relative;
+  }
+  ::selection{background:var(--orange);color:#0a0a0a;}
+
+  /* ---------- background hex grid ---------- */
+  .hexfield{
+    position:fixed;
+    inset:0;
+    z-index:0;
+    pointer-events:none;
+    opacity:.05;
+    background-image:
+      repeating-linear-gradient(60deg, var(--text) 0 1px, transparent 1px 64px),
+      repeating-linear-gradient(-60deg, var(--text) 0 1px, transparent 1px 64px),
+      repeating-linear-gradient(0deg, var(--text) 0 1px, transparent 1px 64px);
+  }
+  .scanline{
+    position:fixed;inset:0;z-index:60;pointer-events:none;
+    background:repeating-linear-gradient(0deg, rgba(0,0,0,0.0) 0 2px, rgba(0,0,0,0.05) 2px 3px);
+    mix-blend-mode:overlay;
+    opacity:.35;
+  }
+  .vignette{
+    position:fixed;inset:0;z-index:59;pointer-events:none;
+    background:radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.65) 100%);
+  }
+
+  /* ---------- nav ---------- */
+  header{
+    position:fixed;top:0;left:0;right:0;z-index:50;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:20px clamp(20px,4vw,56px);
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(to bottom, rgba(8,8,10,0.9), rgba(8,8,10,0));
+    backdrop-filter:blur(6px);
+  }
+  .brand{
+    display:flex;align-items:center;gap:12px;
+    font-family:var(--mono);letter-spacing:.12em;font-size:13px;
+  }
+  .brand-mark{
+    width:26px;height:26px;position:relative;flex-shrink:0;
+  }
+  .brand-mark svg{width:100%;height:100%;}
+  .brand small{display:block;color:var(--text-dim);font-size:9px;letter-spacing:.15em;margin-top:2px;}
+  nav ul{
+    list-style:none;display:flex;gap:clamp(14px,2.4vw,34px);
+    font-family:var(--mono);font-size:11px;letter-spacing:.14em;
+  }
+  nav a{color:var(--text-dim);text-decoration:none;transition:color .2s;position:relative;}
+  nav a:hover{color:var(--orange);}
+  nav a::before{content:'0'attr(data-i)' / ';color:var(--red);opacity:.7;}
+  .status-dot{
+    display:none;
+  }
+  @media(max-width:760px){ nav ul{display:none;} }
+
+  /* ---------- hero ---------- */
+  .hero{
+    position:relative;
+    min-height:100vh;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    align-items:center;
+    padding:0 clamp(20px,4vw,56px);
+    overflow:hidden;
+  }
+  #canvas-wrap{
+    position:relative;
+    height:88vh;
+    display:flex;align-items:center;justify-content:center;
+    will-change:transform,opacity;
+  }
+  #canvas-wrap canvas{display:block;}
+  .rig-frame{
+    position:absolute;inset:6% 8%;
+    pointer-events:none;
+  }
+  .rig-frame span{
+    position:absolute;width:22px;height:22px;
+    border:1px solid var(--orange);opacity:.6;
+  }
+  .rig-frame .tl{top:0;left:0;border-right:none;border-bottom:none;}
+  .rig-frame .tr{top:0;right:0;border-left:none;border-bottom:none;}
+  .rig-frame .bl{bottom:0;left:0;border-right:none;border-top:none;}
+  .rig-frame .br{bottom:0;right:0;border-left:none;border-top:none;}
+  .rig-label{
+    position:absolute;font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--text-dim);
+  }
+  .rig-label.top{top:-24px;left:0;}
+  .rig-label.bottom{bottom:-24px;right:0;text-align:right;}
+
+  .hero-content{
+    position:relative;z-index:5;
+    padding-left:clamp(10px,3vw,40px);
+  }
+  .eyebrow{
+    font-family:var(--mono);font-size:12px;letter-spacing:.22em;
+    color:var(--orange);display:flex;align-items:center;gap:10px;margin-bottom:22px;
+  }
+  .eyebrow::before{content:'';width:26px;height:1px;background:var(--orange);}
+  h1.headline{
+    font-family:var(--disp);
+    font-weight:700;
+    font-size:clamp(48px,8vw,108px);
+    line-height:.92;
+    letter-spacing:.01em;
+    text-transform:uppercase;
+    color:var(--text);
+  }
+  h1.headline span{
+    display:block;
+    color:transparent;
+    -webkit-text-stroke:1px var(--text-dim);
+    font-size:.42em;
+    letter-spacing:.3em;
+    margin-top:10px;
+  }
+  .hero-desc{
+    max-width:440px;margin-top:26px;
+    color:var(--text-dim);font-size:15px;line-height:1.7;
+  }
+  .hero-desc b{color:var(--text);font-weight:500;}
+
+  .sync-block{
+    margin-top:40px;max-width:400px;
+    font-family:var(--mono);
+  }
+  .sync-label{
+    display:flex;justify-content:space-between;font-size:11px;
+    letter-spacing:.14em;color:var(--text-dim);margin-bottom:8px;
+  }
+  .sync-label b{color:var(--green);font-weight:700;}
+  .sync-bar{
+    height:6px;background:var(--line);position:relative;overflow:hidden;
+  }
+  .sync-fill{
+    position:absolute;left:0;top:0;bottom:0;width:0%;
+    background:linear-gradient(90deg, var(--purple), var(--green));
+    transition:width 2.2s cubic-bezier(.2,.8,.2,1);
+  }
+
+  .scroll-cue{
+    margin-top:56px;display:flex;align-items:center;gap:10px;
+    font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--text-dim);
+  }
+  .scroll-cue .bar{width:1px;height:34px;background:var(--line-strong);position:relative;overflow:hidden;}
+  .scroll-cue .bar::after{
+    content:'';position:absolute;left:0;top:-100%;width:100%;height:100%;
+    background:var(--orange);animation:cue 1.8s infinite;
+  }
+  @keyframes cue{ to{top:100%;} }
+
+  @media(max-width:900px){
+    .hero{grid-template-columns:1fr;padding-top:120px;}
+    #canvas-wrap{height:46vh;order:1;}
+    .hero-content{order:2;padding:0;margin-top:20px;}
+  }
+
+  /* ---------- generic section shell ---------- */
+  section.block{
+    position:relative;z-index:2;
+    padding:120px clamp(20px,4vw,56px);
+    border-top:1px solid var(--line);
+  }
+  .section-head{
+    display:flex;align-items:baseline;gap:18px;margin-bottom:64px;
+    opacity:0;transform:translateY(24px);transition:opacity .8s ease, transform .8s ease;
+  }
+  .section-head.in-view{opacity:1;transform:none;}
+  .section-num{font-family:var(--mono);color:var(--red);font-size:13px;letter-spacing:.1em;}
+  .section-title{
+    font-family:var(--disp);font-weight:700;text-transform:uppercase;
+    font-size:clamp(28px,3.4vw,44px);letter-spacing:.01em;
+  }
+  .section-sub{
+    font-family:var(--mono);font-size:11px;color:var(--text-dim);letter-spacing:.1em;margin-left:auto;
+    text-align:right;
+  }
+  .reveal{opacity:0;transform:translateY(28px);transition:opacity .7s ease, transform .7s ease;}
+  .reveal.in-view{opacity:1;transform:none;}
+
+  /* ---------- about ---------- */
+  .about-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:64px;}
+  .about-grid p{color:var(--text-dim);line-height:1.85;font-size:15.5px;margin-bottom:20px;}
+  .about-grid p b{color:var(--text);font-weight:500;}
+  .about-stats{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);}
+  .stat{background:var(--bg);padding:26px 20px;}
+  .stat .n{font-family:var(--disp);font-size:34px;font-weight:700;color:var(--orange);}
+  .stat .l{font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:.1em;margin-top:6px;}
+  @media(max-width:800px){ .about-grid{grid-template-columns:1fr;} }
+
+  /* ---------- units ---------- */
+  .unit-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);}
+  .unit-card{background:var(--bg);padding:34px 28px;position:relative;transition:background .25s;}
+  .unit-card:hover{background:var(--bg-alt);}
+  .unit-card .tag{font-family:var(--mono);font-size:10px;color:var(--text-dim);letter-spacing:.14em;}
+  .unit-card h3{font-family:var(--disp);font-size:30px;font-weight:700;margin:10px 0 14px;letter-spacing:.02em;}
+  .unit-card .swatch{width:34px;height:6px;margin-bottom:16px;}
+  .unit-card dl{font-family:var(--mono);font-size:11px;color:var(--text-dim);}
+  .unit-card dl div{display:flex;justify-content:space-between;padding:6px 0;border-top:1px dashed var(--line);}
+  .unit-card dl b{color:var(--text);font-weight:500;}
+  @media(max-width:800px){ .unit-grid{grid-template-columns:1fr;} }
+
+  /* ---------- angel log ---------- */
+  table.angel-log{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12.5px;}
+  table.angel-log th{
+    text-align:left;color:var(--text-dim);font-weight:500;letter-spacing:.12em;
+    font-size:10px;padding:12px 14px;border-bottom:1px solid var(--line-strong);
+  }
+  table.angel-log td{padding:16px 14px;border-bottom:1px solid var(--line);color:var(--text-dim);}
+  table.angel-log tr td:first-child{color:var(--orange);font-weight:700;}
+  table.angel-log tr td:nth-child(2){color:var(--text);}
+  table.angel-log tr{transition:background .2s;}
+  table.angel-log tr:hover{background:var(--bg-alt);}
+  .status-pill{
+    display:inline-block;padding:3px 9px;font-size:9px;letter-spacing:.1em;
+    border:1px solid var(--red);color:var(--red);
+  }
+  .status-pill.contained{border-color:var(--green);color:var(--green);}
+
+  /* ---------- timeline ---------- */
+  .timeline{position:relative;padding-left:26px;}
+  .timeline::before{content:'';position:absolute;left:0;top:6px;bottom:6px;width:1px;background:var(--line-strong);}
+  .t-item{position:relative;padding-bottom:52px;}
+  .t-item:last-child{padding-bottom:0;}
+  .t-item::before{
+    content:'';position:absolute;left:-30px;top:4px;width:9px;height:9px;
+    background:var(--bg);border:1px solid var(--orange);
+  }
+  .t-item .yr{font-family:var(--mono);color:var(--orange);font-size:12px;letter-spacing:.1em;}
+  .t-item h4{font-family:var(--disp);font-size:22px;font-weight:600;margin:6px 0 8px;}
+  .t-item p{color:var(--text-dim);font-size:14px;line-height:1.7;max-width:600px;}
+
+  /* ---------- footer ---------- */
+  .hazard{
+    height:14px;
+    background:repeating-linear-gradient(-45deg, var(--orange) 0 14px, #111 14px 28px);
+    opacity:.85;
+  }
+  footer{
+    padding:56px clamp(20px,4vw,56px) 40px;
+    display:flex;flex-wrap:wrap;gap:24px;justify-content:space-between;align-items:flex-end;
+  }
+  footer .fbrand{font-family:var(--mono);font-size:12px;letter-spacing:.14em;color:var(--text-dim);}
+  footer .fbrand b{color:var(--text);}
+  footer .flinks{display:flex;gap:26px;font-family:var(--mono);font-size:11px;}
+  footer .flinks a{color:var(--text-dim);text-decoration:none;}
+  footer .flinks a:hover{color:var(--orange);}
+  footer .fnote{width:100%;margin-top:28px;font-family:var(--mono);font-size:10px;color:var(--text-dim);opacity:.6;letter-spacing:.05em;}
+
+  #loading{
+    position:fixed;inset:0;z-index:100;background:var(--bg);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+    font-family:var(--mono);letter-spacing:.14em;font-size:12px;color:var(--text-dim);
+    transition:opacity .6s ease, visibility .6s ease;
+  }
+  #loading.hide{opacity:0;visibility:hidden;pointer-events:none;}
+  #loading .bar{width:220px;height:2px;background:var(--line-strong);overflow:hidden;}
+  #loading .bar i{display:block;height:100%;width:0%;background:var(--orange);transition:width .2s;}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div>SINCRONIZANDO UNIDADE 01<span id="load-pct">&nbsp;0%</span></div>
+  <div class="bar"><i id="load-bar"></i></div>
+</div>
+
+<div class="hexfield"></div>
+<div class="vignette"></div>
+<div class="scanline"></div>
+
+<header>
+  <div class="brand">
+    <span class="brand-mark">
+      <svg viewBox="0 0 40 40" fill="none">
+        <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" stroke="var(--orange)" stroke-width="1.4"/>
+        <circle cx="20" cy="20" r="6" stroke="var(--red)" stroke-width="1.4"/>
+        <line x1="20" y1="2" x2="20" y2="14" stroke="var(--text-dim)" stroke-width="1"/>
+      </svg>
+    </span>
+    <span>NERV<small>PROJETO&nbsp;E&nbsp;/&nbsp;TÓQUIO-3</small></span>
+  </div>
+  <nav>
+    <ul>
+      <li><a href="#about" data-i="1">NERV</a></li>
+      <li><a href="#units" data-i="2">UNIDADES</a></li>
+      <li><a href="#angels" data-i="3">ANJOS</a></li>
+      <li><a href="#timeline" data-i="4">CRONOLOGIA</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main>
+  <section class="hero">
+    <div id="canvas-wrap">
+      <div class="rig-frame">
+        <span class="tl"></span><span class="tr"></span><span class="bl"></span><span class="br"></span>
+        <span class="rig-label top">UNIT-01 / VISUAL-REC</span>
+        <span class="rig-label bottom">ESCALA 1:1 · REC. AO VIVO</span>
+      </div>
+    </div>
+
+    <div class="hero-content">
+      <div class="eyebrow">EVA-01 · ARMA BIO-MECÂNICA</div>
+      <h1 class="headline">EVANGELION<span>汎用人型決戦兵器</span></h1>
+      <p class="hero-desc">
+        Desenvolvida pela <b>NERV</b> sob o Projeto E, a Unidade-01 é a arma de propósito geral
+        concebida para interceptar os <b>Anjos</b> antes que alcancem o Geofront. Cada ativação
+        exige sincronia total entre piloto e núcleo — o resto é classificado.
+      </p>
+
+      <div class="sync-block">
+        <div class="sync-label"><span>TAXA DE SINCRONIZAÇÃO</span><b id="sync-val">41.3%</b></div>
+        <div class="sync-bar"><div class="sync-fill" id="sync-fill"></div></div>
+      </div>
+
+      <div class="scroll-cue"><div class="bar"></div>ROLAR PARA ATIVAR</div>
+    </div>
+  </section>
+
+  <section class="block" id="about">
+    <div class="section-head">
+      <span class="section-num">01</span>
+      <h2 class="section-title">NERV — Geofront, Tóquio-3</h2>
+      <span class="section-sub">ÓRGÃO ESPECIAL DAS<br>NAÇÕES UNIDAS</span>
+    </div>
+    <div class="about-grid">
+      <div class="reveal">
+        <p>Erguida sobre as ruínas do <b>Segundo Impacto</b>, a cidade fortificada de Tóquio-3
+        esconde sob si o <b>Geofront</b> — sede da NERV e último bastião de defesa contra os
+        Anjos. Sua missão declarada é impedir o <b>Terceiro Impacto</b> a qualquer custo.</p>
+        <p>Comandada em segredo, a organização controla o desenvolvimento das Unidades
+        Evangelion, recrutando pilotos de <b>Compatibilidade A</b> — em geral, crianças nascidas
+        após o Segundo Impacto, ligadas às unidades por vínculos que a NERV prefere não
+        explicar.</p>
+      </div>
+      <div class="about-stats reveal">
+        <div class="stat"><div class="n">03</div><div class="l">UNIDADES OPERACIONAIS</div></div>
+        <div class="stat"><div class="n">2015</div><div class="l">ANO DO PRIMEIRO CONTATO</div></div>
+        <div class="stat"><div class="n">Lv.A</div><div class="l">COMPATIBILIDADE MÍNIMA</div></div>
+        <div class="stat"><div class="n">S2</div><div class="l">ÓRGÃO — FONTE DE ENERGIA</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="units">
+    <div class="section-head">
+      <span class="section-num">02</span>
+      <h2 class="section-title">Unidades Evangelion</h2>
+      <span class="section-sub">REGISTRO DE<br>ATIVOS NERV</span>
+    </div>
+    <div class="unit-grid">
+      <div class="unit-card reveal">
+        <div class="tag">EVA-00 · PROTÓTIPO</div>
+        <h3>UNIDADE 00</h3>
+        <div class="swatch" style="background:#e8983c"></div>
+        <dl>
+          <div><span>Piloto</span><b>Ayanami, R.</b></div>
+          <div><span>Cor</span><b>Laranja pálido</b></div>
+          <div><span>Status</span><b>Operacional</b></div>
+        </dl>
+      </div>
+      <div class="unit-card reveal">
+        <div class="tag">EVA-01 · TESTE</div>
+        <h3>UNIDADE 01</h3>
+        <div class="swatch" style="background:var(--purple)"></div>
+        <dl>
+          <div><span>Piloto</span><b>Ikari, S.</b></div>
+          <div><span>Cor</span><b>Violeta / Verde</b></div>
+          <div><span>Status</span><b>Restrição ativa</b></div>
+        </dl>
+      </div>
+      <div class="unit-card reveal">
+        <div class="tag">EVA-02 · PRODUÇÃO</div>
+        <h3>UNIDADE 02</h3>
+        <div class="swatch" style="background:var(--red)"></div>
+        <dl>
+          <div><span>Piloto</span><b>Soryu, A.</b></div>
+          <div><span>Cor</span><b>Vermelho</b></div>
+          <div><span>Status</span><b>Em trânsito</b></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="angels">
+    <div class="section-head">
+      <span class="section-num">03</span>
+      <h2 class="section-title">Registro de Anjos</h2>
+      <span class="section-sub">CLASSIFICAÇÃO<br>POR ORDEM DE APARIÇÃO</span>
+    </div>
+    <div class="reveal" style="overflow-x:auto;">
+      <table class="angel-log">
+        <thead>
+          <tr><th>Nº</th><th>Designação</th><th>Primeiro contato</th><th>Método</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>03</td><td>Sachiel</td><td>Tóquio-3</td><td>Interceptação direta — EVA-01</td><td><span class="status-pill">Neutralizado</span></td></tr>
+          <tr><td>04</td><td>Shamshel</td><td>Perímetro leste</td><td>Combate corpo a corpo</td><td><span class="status-pill">Neutralizado</span></td></tr>
+          <tr><td>05</td><td>Ramiel</td><td>Monte Futago</td><td>Disparo de precisão — Operação Yashima</td><td><span class="status-pill">Neutralizado</span></td></tr>
+          <tr><td>09</td><td>Matarael</td><td>Coletores de esgoto</td><td>Ácido corrosivo — contido</td><td><span class="status-pill contained">Contido</span></td></tr>
+          <tr><td>12</td><td>Leliel</td><td>Setor sul</td><td>Ainda em análise</td><td><span class="status-pill">Anômalo</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="block" id="timeline">
+    <div class="section-head">
+      <span class="section-num">04</span>
+      <h2 class="section-title">Cronologia</h2>
+      <span class="section-sub">LINHA DO TEMPO<br>RESUMIDA</span>
+    </div>
+    <div class="timeline reveal">
+      <div class="t-item">
+        <div class="yr">2000</div>
+        <h4>Segundo Impacto</h4>
+        <p>Um evento catastrófico na Antártida altera o eixo do planeta, inundando metade das
+        terras emersas e dando início à era que tornaria a NERV necessária.</p>
+      </div>
+      <div class="t-item">
+        <div class="yr">2015</div>
+        <h4>Primeiro contato</h4>
+        <p>O Anjo Sachiel rompe as defesas de Tóquio-3. A Unidade-01 é ativada pela primeira
+        vez em combate, sem autorização formal de lançamento.</p>
+      </div>
+      <div class="t-item">
+        <div class="yr">2015+</div>
+        <h4>Escalada</h4>
+        <p>Novos Anjos surgem em intervalos cada vez menores. A NERV amplia o programa de
+        pilotos e acelera a produção da Unidade-02.</p>
+      </div>
+      <div class="t-item">
+        <div class="yr">???</div>
+        <h4>Cenário classificado</h4>
+        <p>Registros posteriores a este ponto permanecem sob sigilo do Comitê de Instrumentalização.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="hazard"></div>
+<footer>
+  <div class="fbrand"><b>NERV</b> — Projeto E · Divisão de Registros Técnicos</div>
+  <div class="flinks">
+    <a href="#about">NERV</a>
+    <a href="#units">Unidades</a>
+    <a href="#angels">Anjos</a>
+    <a href="#timeline">Cronologia</a>
+  </div>
+  <div class="fnote">Site tributo feito por fã. Neon Genesis Evangelion e elementos associados
+  pertencem aos seus respectivos detentores de direitos. Não afiliado à Khara, Gainax ou Studio Khara.</div>
+</footer>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+const wrap = document.getElementById('canvas-wrap');
+const loading = document.getElementById('loading');
+const loadBar = document.getElementById('load-bar');
+const loadPct = document.getElementById('load-pct');
+
+let width = wrap.clientWidth, height = wrap.clientHeight;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(38, width / height, 0.1, 1000);
+camera.position.set(0, 1.1, 6.2);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(width, height);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+wrap.appendChild(renderer.domElement);
+
+// lighting — purple/green EVA rim, warm key
+const key = new THREE.DirectionalLight(0xfff2e0, 1.6);
+key.position.set(3, 5, 4);
+scene.add(key);
+
+const rimGreen = new THREE.DirectionalLight(0x8fd400, 2.2);
+rimGreen.position.set(-4, 2, -3);
+scene.add(rimGreen);
+
+const rimPurple = new THREE.PointLight(0x7a2f8a, 3.5, 20);
+rimPurple.position.set(2, -1, -3);
+scene.add(rimPurple);
+
+const ambient = new THREE.AmbientLight(0x1a1a20, 1.1);
+scene.add(ambient);
+
+let model = null;
+let mixer = null;
+const clock = new THREE.Clock();
+
+const loader = new GLTFLoader();
+loader.load(
+  'eva-unit01.glb',
+  (gltf) => {
+    model = gltf.scene;
+
+    // normalize scale & center
+    const box = new THREE.Box3().setFromObject(model);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    const maxDim = Math.max(size.x, size.y, size.z) || 1;
+    const scale = 3.4 / maxDim;
+    model.scale.setScalar(scale);
+
+    box.setFromObject(model);
+    box.getCenter(center);
+    model.position.sub(center);
+    model.position.y -= 0.1;
+
+    model.traverse((n) => { if (n.isMesh) { n.castShadow = false; n.receiveShadow = false; } });
+
+    scene.add(model);
+
+    if (gltf.animations && gltf.animations.length) {
+      mixer = new THREE.AnimationMixer(model);
+      mixer.clipAction(gltf.animations[0]).play();
+    }
+
+    loading.classList.add('hide');
+  },
+  (xhr) => {
+    if (xhr.total) {
+      const pct = Math.min(100, Math.round((xhr.loaded / xhr.total) * 100));
+      loadBar.style.width = pct + '%';
+      loadPct.textContent = ' ' + pct + '%';
+    }
+  },
+  (err) => {
+    console.error('Falha ao carregar o modelo 3D:', err);
+    loadPct.textContent = ' ERRO';
+    loading.querySelector('div').textContent = 'FALHA NO CARREGAMENTO DO MODELO';
+  }
+);
+
+function onResize() {
+  width = wrap.clientWidth; height = wrap.clientHeight;
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+  renderer.setSize(width, height);
+}
+window.addEventListener('resize', onResize);
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  if (mixer) mixer.update(dt);
+  if (model) {
+    model.rotation.y += dt * 0.18;
+    model.position.y += Math.sin(clock.elapsedTime * 0.8) * 0.0006;
+  }
+  renderer.render(scene, camera);
+}
+animate();
+
+// ---------- scroll: model slides left & fades ----------
+const hero = document.querySelector('.hero');
+function onScroll() {
+  const heroH = hero.offsetHeight;
+  const progress = Math.min(1, Math.max(0, window.scrollY / (heroH * 0.85)));
+  wrap.style.transform = `translateX(${progress * -60}vw)`;
+  wrap.style.opacity = String(1 - progress);
+  document.querySelector('.rig-frame').style.opacity = String(1 - progress * 1.4);
+}
+window.addEventListener('scroll', onScroll, { passive: true });
+onScroll();
+
+// ---------- reveal on scroll ----------
+const io = new IntersectionObserver((entries) => {
+  entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add('in-view'); });
+}, { threshold: 0.18 });
+document.querySelectorAll('.reveal, .section-head').forEach((el) => io.observe(el));
+
+// ---------- sync bar ----------
+setTimeout(() => { document.getElementById('sync-fill').style.width = '41.3%'; }, 500);
+</script>
+</body>
+</html>
